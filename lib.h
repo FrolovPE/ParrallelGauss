@@ -4,7 +4,8 @@
 #include <cstring>
 #include <vector>
 #include <pthread.h>
-#include <sched.h>  
+#include <sched.h>
+#include "mytime.h"
 
 #define EPS64 1e-64
 using namespace std;

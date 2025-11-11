@@ -39,6 +39,18 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    if(argc == 7 && s!=0)
+    {
+        printf("Wrong usage! If s!=0 dont use initialization from file or s == 0 and file name not specified \n");
+        // report(argv[0],task,r1,r2,t1,t2,s,n,m); 
+        return 0;
+    }else if(argc == 6 && (s<1 || s>4))
+    {
+        printf("bad argument for s, s=1,2,3,4 \n");
+        // report(argv[0],task,r1,r2,t1,t2,s,n,m); 
+        return 0;
+    }
+
     printf("n = %d m = %d p = %d r = %d s = %d\n",n,m,p,r,s);
 
     
@@ -67,6 +79,50 @@ int main(int argc, char *argv[])
         ap[thr].p = p;
         ap[thr].mutex = &mutex;
         ap[thr].barrier = &barrier;
+    }
+
+    double elapsed = get_full_time();
+
+    for(thr = 1; thr < p; thr++)
+    {
+        if(pthread_create(tid+thr,0,parallelSolve,ap+thr))
+        {
+            printf("ERROR: Cannot create thread %d\n",thr);
+            delete []a;
+            delete []b;
+            delete []x;
+            delete []realx;
+            delete []tid;
+            delete []ap;
+            pthread_mutex_destroy(&mutex);
+            pthread_barrier_destroy(&barrier);
+
+            return -1;
+        }
+    }
+
+    parallelSolve(ap+0);
+
+
+    for(thr = 1; thr < p; thr++)
+    {
+        if(pthread_join(tid[thr], 0))
+        {
+            printf("ERROR: Cannot join thread %d\n",thr);
+            delete []a;
+            delete []b;
+            delete []x;
+            delete []realx;
+            delete []tid;
+            delete []ap;
+            pthread_mutex_destroy(&mutex);
+            pthread_barrier_destroy(&barrier);
+
+            return -1;
+        }
+
+        elapsed = get_full_time() - elapsed;
+        printf("CPU Time thread %d = %.2lf\n",thr,elapsed);
     }
 
     // if(argc == 5 && s>=1 && s<=4)
@@ -381,6 +437,6 @@ int main(int argc, char *argv[])
     delete []colsw ;
     pthread_mutex_destroy(&mutex);
     pthread_barrier_destroy(&barrier);
-    
+
     return 0;
 }
