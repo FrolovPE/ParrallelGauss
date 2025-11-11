@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include "lib.h"
+#include "args.h"
 using namespace std;
 
 void printlxn(const double *a, int size, int l, int n, int r)
@@ -20,6 +21,57 @@ void printlxn(const double *a, int size, int l, int n, int r)
     cout<<endl;
 
 }
+
+int readarray(double *a, int n, char* filename){
+        int _c=0;
+        double el;
+
+        FILE *file = fopen(filename,"r");
+        if(!file){
+            
+            printf("File %s doesnt exist or wrong file name!\n",filename);
+            // report(argv[0],task,r1,r2,t1,t2,s,n,m); 
+            // delete []a;
+            // delete []b;
+            // delete []x;
+            // delete []realx;
+            
+            return -1;
+        }
+
+        while(fscanf(file,"%lf",&el)==1)
+        {
+            if(_c<n*n) 
+            {
+                a[_c] = el;
+                _c++;
+            }else
+            {
+                printf("Bad scan from file %s\n",filename);
+                // report(argv[0],task,r1,r2,t1,t2,s,n,m); 
+                // delete []a;
+                // delete []b;
+                // delete []x;
+                // delete []realx;
+                fclose(file);
+                return -2;
+            }
+
+        
+        }
+        if(!feof(file) || _c!=n*n){
+            printf("Bad file %s\n",filename);
+            // report(argv[0],task,r1,r2,t1,t2,s,n,m); 
+            fclose(file);
+            // delete []a;
+            // delete []b;
+            // delete []x;
+            // delete []realx;
+            return -3;
+        }
+        fclose(file);
+        return 0;
+    }
 
 
 double f (int s , int n , int i , int j)
@@ -1190,9 +1242,83 @@ int solution(int n, int m, double *a, double *b, double *x,
 
 void* parallelSolve(void* ptr)
 {
-    ptr=ptr;
+    args *ap = (args*) ptr;
 
-    return ptr;
+    double *a = ap->a;
+    double *b = ap->b;
+    int n = ap->n;
+    int m = ap->m;
+    int s = ap->s;
+    int r = ap->r;
+    int thr = ap->thr;
+    int p = ap->p;
+    char* name = ap->name;
+    // pthread_barrier_t *barrier = ap->barrier;
+    // pthread_mutex_t *mutex = ap->mutex;
+    cpu_set_t cpu;
+
+    CPU_ZERO(&cpu);
+
+    int n_cpus = get_nprocs();
+    int cpu_id = n_cpus -1 -(thr%n_cpus);
+
+    CPU_SET(cpu_id,&cpu);
+    pthread_t tid = pthread_self();
+
+    pthread_setaffinity_np(tid,sizeof(cpu),&cpu);
+
+    //obnulaem matricu chtobi privyazat ee k cpu
+
+    for(int i = thr*m; i<n; i+=p*m)
+    {
+        int h = (i+m < n ? m : i+m-n);
+        memset(a+i*h,0,h*n*sizeof(double));
+        memset(b+i,0,n*sizeof(double));
+    }
+
+    if(name)
+    {
+        int res;
+        if(thr == 0)
+        {
+            res = readarray(a,n,name);
+        }
+
+        // pthread_barrier_wait(barrier);
+
+        if(res < 0) //tut kazdui thread dolzen znat chto res < 0
+        {
+            res=res;
+            // obrabotka
+            // return 0;
+        }
+
+    }else
+    {
+        pllinit_matrix(a,s,n,m,thr,p);
+    }
+    // init_b(a,s,n,b,thr,p);
+
+    double t = get_cpu_time();
+
+    // parallelSolve(...)
+
+    t = get_cpu_time() - t;
+
+    ap->time =t;
+
+    if(thr == 0)
+    {
+        printlxn(a,n,n,n,r);
+    }
+
+    // pthread_barrier_wait(barrier);
+
+    // tut osvobozdaem memory allocated in thread
+
+    // pthread_barrier_wait(barrier);
+
+    return nullptr;
 }
 
 void pllinit_matrix(double *a,int s, int n , int m , int k, int p)
@@ -1214,7 +1340,7 @@ void pllinit_matrix(double *a,int s, int n , int m , int k, int p)
         }
     }
 
-    pthread_barrier_wait(&b);
+    // pthread_barrier_wait(&b);
 
     pthread_barrier_destroy(&b);
 

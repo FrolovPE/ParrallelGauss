@@ -37,7 +37,7 @@ clean:
 	rm $(exec)
 
 git:
-	./commit.sh
+	../sequentialGauss/commit.sh
 	
 	
 

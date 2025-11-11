@@ -12,8 +12,8 @@ int r{};
 int s{};
 int thr{};
 int p{};
+int err{};
 double time{};
-
 
 pthread_barrier_t *barrier{};
 pthread_mutex_t *mutex{};

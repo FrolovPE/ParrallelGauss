@@ -5,13 +5,16 @@
 #include <vector>
 #include <pthread.h>
 #include <sched.h>
+#include <sys/sysinfo.h>
 #include "mytime.h"
+
 
 #define EPS64 1e-64
 using namespace std;
 
 
 void printlxn(const double *a, int size, int l, int n, int r);
+int readarray(double *a, int n, char* filename);
 double f (int s , int n , int i , int j);
 void init(double *a, double (*f)(int,int,int,int), int n, int s);
 int solution(int n, int m, double *a, double *b, double *x,

@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
         ap[thr].name = filename;
         ap[thr].thr = thr;
         ap[thr].p = p;
+        ap[thr].err = 0;
         ap[thr].mutex = &mutex;
         ap[thr].barrier = &barrier;
     }
