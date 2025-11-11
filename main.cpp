@@ -435,6 +435,8 @@ int main(int argc, char *argv[])
     delete []tmpvecb_m ;
     delete []tmpvecb_l ; 
     delete []colsw ;
+    delete []tid;
+    delete []ap;
     pthread_mutex_destroy(&mutex);
     pthread_barrier_destroy(&barrier);
 
