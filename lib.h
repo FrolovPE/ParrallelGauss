@@ -51,3 +51,4 @@ void vec_mult_sub_lm(double* Result, double* A, double* vec, int l,int m);
 void multiplication(double* Result, double* Block_A, double* Block_B, const int row_A, const int col_row,const int col_B);
 void* parallelSolve(void* ptr);
 void pllinit_matrix(double *a, int s,int n , int m , int k, int p);
+void pllinit_vectorb(double *b,double *a,int n , int m , int k, int p);

@@ -33,6 +33,10 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    if(argc == 7) filename = argv[6];
+
+    
+
     if(m<=0 || n<0 || r<0 || s<0 || p < 0)
     {
         printf("<n> or <m> or <r> or <s> or <p> <= 0, usage m,n,r,s,p > 0");
@@ -51,7 +55,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    printf("n = %d m = %d p = %d r = %d s = %d\n",n,m,p,r,s);
+    // printf("n = %d m = %d p = %d r = %d s = %d\n",n,m,p,r,s);
 
     
 
