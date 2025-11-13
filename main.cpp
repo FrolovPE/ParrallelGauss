@@ -63,10 +63,18 @@ int main(int argc, char *argv[])
     b = new double[n];  // create vector b
     x = new double[n];  // create vector x
     realx = new double[n];  // create vector real x
+    int *mainblocks = new int[p];
+    double *minnorms = new double[p];
     args *ap = new args[p];
     pthread_t *tid = new pthread_t[p];
     pthread_barrier_t barrier;
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    
+    for(int i = 0 ; i < p; i++)
+    {
+        mainblocks[i] = -1;
+        minnorms[i] = -1;
+    }
 
     pthread_barrier_init(&barrier,0,p);
 
@@ -84,6 +92,8 @@ int main(int argc, char *argv[])
         ap[thr].err = 0;
         ap[thr].mutex = &mutex;
         ap[thr].barrier = &barrier;
+        ap[thr].mainblocks = mainblocks;
+        ap[thr].minnorms = minnorms;
     }
 
     double elapsed = get_full_time();
