@@ -10,6 +10,7 @@
 
 
 #define EPS64 1e-64
+#define CLEAR     clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw)
 using namespace std;
 
 
@@ -52,3 +53,4 @@ void multiplication(double* Result, double* Block_A, double* Block_B, const int 
 void* parallelSolve(void* ptr);
 void pllinit_matrix(double *a, int s,int n , int m , int k, int p);
 void pllinit_vectorb(double *b,double *a,int n , int m , int k, int p);
+void clear(double *block_mm,double *block_ml,double *block_ll,double *tmpblock_mm,double *tmpblock_ml,double *tmpblock_ml1,double *tmpblock_ll,double *invblock_mm,double *invblock_ll,double *diagblock_mm,double *diaginvblock_mm,double *vecb_m,double *vecb_l,double *tmpvecb_m, double *tmpvecb_l,int *colsw);

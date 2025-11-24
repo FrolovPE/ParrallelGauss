@@ -98,6 +98,8 @@ int main(int argc, char *argv[])
 
     double elapsed = get_full_time();
 
+    auto start_sol= std::chrono::high_resolution_clock::now();
+
     for(thr = 1; thr < p; thr++)
     {
         if(pthread_create(tid+thr,0,parallelSolve,ap+thr))
@@ -139,6 +141,8 @@ int main(int argc, char *argv[])
         elapsed = get_full_time() - elapsed;
         printf("CPU Time thread %d = %.2lf\n",thr,elapsed);
     }
+
+    auto end_sol= std::chrono::high_resolution_clock::now();
 
     // if(argc == 5 && s>=1 && s<=4)
     // {
@@ -292,7 +296,7 @@ int main(int argc, char *argv[])
     
 //     printf("norm A  = %lf \n",normofmatrix(a,n));
 
-    auto start_sol= std::chrono::high_resolution_clock::now();
+    
 
     // if(solution(n,m,a,b,x,
     //     block_mm,block_ml,block_ll,invblock_mm,diaginvblock_mm,
@@ -331,7 +335,7 @@ int main(int argc, char *argv[])
 
     
 
-    auto end_sol = std::chrono::high_resolution_clock::now();
+    // auto end_sol = std::chrono::high_resolution_clock::now();
 
     //print vector x
     // cout<<"\nSolution vector x : ";
