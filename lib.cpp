@@ -203,10 +203,10 @@ void residuals(double &r1,double &r2,double *a,double *b,double *x,double *realx
 
 
 
-void report(char *title, int task, double r1, double r2 ,double t1,  double t2 ,int s, int n , int m )
+void report(char *title, int task, double r1, double r2 ,double t1,  double t2 ,int s, int n , int m,int p )
 {
-    printf ("%s : Task = %d Res1 = %e Res2 = %e T1 = %.2lf T2 = %.2lf S = %d N = %d M = %d\n",
-title, task, r1, r2, t1, t2, s, n, m);
+    printf ("%s : Task = %d Res1 = %e Res2 = %e T1 = %.2lf T2 = %.2lf S = %d N = %d M = %d P = %d\n",
+title, task, r1, r2, t1, t2, s, n, m,p);
 }
 
 
@@ -2209,6 +2209,7 @@ void* parallelSolve(void* ptr)
 
     double *a = ap->a;
     double *b = ap->b;
+    double *x = ap->x;
     int n = ap->n;
     int m = ap->m;
     int s = ap->s;
@@ -2399,7 +2400,7 @@ void* parallelSolve(void* ptr)
                 {    
                     printf("Have no main block in row %d\n",i);
                     clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
-                    // isout = true;
+                    isout = true;
                     return (void*)(-1);
                 }
 
@@ -2449,8 +2450,7 @@ void* parallelSolve(void* ptr)
                 isout = true;
             }
 
-            if(isout) // exit
-                return (void*)-1;
+            
 
 
             if(mainBlock != i && thr == 0)
@@ -2474,8 +2474,7 @@ void* parallelSolve(void* ptr)
                 isout = true;
             }
 
-            if(isout) // exit
-                return (void*)-1;
+            
 
             if(thr == 0)
             {
@@ -2516,8 +2515,7 @@ void* parallelSolve(void* ptr)
 
             pthread_barrier_wait(barrier);
 
-            if(isout) // exit
-                return (void*)-1;
+            
 
             if(thr == 0 && i == 0) 
                 {
@@ -2526,10 +2524,12 @@ void* parallelSolve(void* ptr)
                 }
         
         }
-        else if(i == k && thr == 0) // uncomm later when i do subtract 
+        else //if(i == k && thr == 0) uncomm later when i do subtract 
         {   
             // printlxn(a,n,n,n,n);
             // printlxn(b,n,1,n,n);
+            if(thr==0)
+            {           
             get_block(a,block_ll,n,m,i,i);
             get_vec_block(b,vecb_l,n,m,i);
 
@@ -2557,12 +2557,13 @@ void* parallelSolve(void* ptr)
 
             set_block(a,tmpblock_ll,n,m,i,i);
             set_vec_block(b,tmpvecb_l,n,m,i);
+            }
             cout<<"WE ARE IN i = k"<<endl;
             pthread_barrier_wait(barrier);
-            pthread_barrier_wait(barrier);
-            pthread_barrier_wait(barrier);
-            pthread_barrier_wait(barrier);
-            pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
         }
 
         pthread_barrier_wait(barrier);
@@ -2632,10 +2633,12 @@ void* parallelSolve(void* ptr)
                 set_block_ml(a,tmpblock_ml1,n,m,l,rr);
                 }
             }
-            else if(rr == k && thr == 0)
+            else //if(rr == k && thr == 0)
             {
                 // printlxn(a,n,n,n,n);
-               get_block_lm(a, block_ml, n, m, l, i);
+                if(thr == 0)
+                {
+                get_block_lm(a, block_ml, n, m, l, i);
 
             //    printf("block_lm in col %d\n",i);
             //    printlxn(block_ml,m,l,m,n);
@@ -2666,6 +2669,7 @@ void* parallelSolve(void* ptr)
                 // get_vec_block(b,tmpvecb_m,n,m,r);//
                 vec_mult_sub_lm(tmpvecb_m,block_ml,vecb_m,l,m);//
                 set_block_lm(a, tmpblock_ml, n, m, l, j);
+                }
                 // set_vec_block(b,tmpvecb_m,n,m,r);//set_vec...
                 }
 
@@ -2686,15 +2690,59 @@ void* parallelSolve(void* ptr)
         }
     }
 
+    pthread_barrier_wait(barrier);
+    if(thr == 0)
+    {
+        printf("Matrix A AFTER ALL OPERATIONS: \n");
+        printlxn(a,n,n,n,r);
+        printf("Vector b AFTER ALL OPERATIONS: \n");
+        printlxn(b,n,1,n,r);
+    }
+
     
     //start reverse alg
+        
+    if(thr == 0)
+    {
+            for(int i = n-1; i >= 0 ; i--)
+        {
+            if(i == n-1) x[i] = b[i];
+            
+            else
+            {
+                x[i] = b[i];
+                for(int j = n-1 ; j >i;j--)
+                {
+                    x[i] -= a[i*n + j]*x[j];
+                }
+            }
+        }
+
+        // cout<<"Vector x before swap :"<<endl;
+        // printlxn(x,n,1,n,n);
+
+        
+
+        for(int i = 0 ; i < k ; i++)
+        {
+            
+
+            if(i != colsw[i]){ 
+                int t;
+                swap_block_vec(x,n,m,i,colsw[i]);
+                t = colsw[colsw[i]];
+                colsw[colsw[i]] = colsw[i];
+                colsw[i] = t; 
+            }
 
 
+        }
+    }
 
     // tut osvobozdaem memory allocated in thread
     CLEAR;
 
-    // pthread_barrier_wait(barrier);
+    pthread_barrier_wait(barrier);
 
     return nullptr;
 }

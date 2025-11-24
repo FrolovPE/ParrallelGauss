@@ -6,6 +6,7 @@ public:
 char *name{};
 double *a{};
 double *b{};
+double *x{};
 int *mainblocks{};
 double *minnorms{};
 int n{};

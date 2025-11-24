@@ -27,7 +27,7 @@ double vectornorm(double *a , int n);
 void mat_x_vector(double *res,double *a, double *b, int n);
 void vectorsub(double *res,double *a,double *b, int n);
 void residuals(double &r1,double &r2,double *a,double *b,double *x,double *realx,int n,double *Ax, double *Ax_b, double *x_realx);
-void report(char *title, int task, double r1, double r2 ,double t1, double t2 ,int s, int n , int m );
+void report(char *title, int task, double r1, double r2 ,double t1, double t2 ,int s, int n , int m , int p);
 void matmult(double *res,double *a, double *b, int n, int m,int l) ;
 void get_block(double *a, double *b, int n, int m, int i, int j);
 void set_block(double *a, double *b, int n, int m, int i, int j);
