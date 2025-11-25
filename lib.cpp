@@ -1240,13 +1240,13 @@ int solution(int n, int m, double *a, double *b, double *x,
 }
 
 
-
 void* parallelSolve1(void* ptr)
 {
     args *ap = (args*) ptr;
 
     double *a = ap->a;
     double *b = ap->b;
+    double *x = ap->x;
     int n = ap->n;
     int m = ap->m;
     int s = ap->s;
@@ -1259,6 +1259,7 @@ void* parallelSolve1(void* ptr)
     pthread_barrier_t *barrier = ap->barrier;
     pthread_mutex_t *mutex = ap->mutex;
     cpu_set_t cpu;
+    static bool isout = false;
 
     CPU_ZERO(&cpu);
 
@@ -1295,7 +1296,7 @@ void* parallelSolve1(void* ptr)
 
         if(res < 0) //tut kazdui thread dolzen znat chto res < 0
         {
-            
+            printf("File %s is bad\n",name);
             return (void*)-1;
         }
 
@@ -1378,351 +1379,322 @@ void* parallelSolve1(void* ptr)
     int tcol = (k<p ? 1:k/p);//how many blocks thread have
     static int mainBlock = -1;
 
-
-    
-
-    
-    
     for(int c =0; c < k  ;c++) colsw[c]=c;
+    (void)mainblocks;
+    (void)minnorms;
+    (void)mutex;
+    (void)eps;
+    (void)is_l;
+    (void)mainBlock;
 
     pthread_barrier_wait(barrier);
 
-    for(int i = 0 ; i < k + is_l; i++)
-    {   
+    for(int i = 0; i < k + is_l; i++)
+    {
         static double minNorm = 1e64;
-        int startzone = (i + tcol*(thr) > k ? k:i + tcol*(thr));
-        int endzone =  /*(thr != p-1 ? tcol*(thr+1):*/ (i + tcol*(thr+1) > k ? k:i + tcol*(thr+1)) ;
+        double locmin = 1e64;
+        int localMainBlock = i;
+        (void)minNorm;
 
-        printf("In thread %d startzone = %d endzone = %d k = %d\n",thr,startzone,endzone,k);
+        int startzone = i + tcol*thr;
+        int endzone = i+tcol*(thr + 1);
 
-        int localmainBlock = i;
-        mainBlock = localmainBlock;
+        startzone = (startzone <= k ? startzone:k);
+        endzone = (endzone <= k ? endzone:k);
 
-        
+        // printf("IN THREAD %d startzone = %d endzone = %d\n",thr,startzone,endzone);
         if(i != k)
         {
-            
-                for(int j = startzone; j < endzone ; j++) // change 1
-                {
-                // int wcol = (j == k ? l:m); // width of block zone
-
-                if(j!=k)
-                    {
-                        get_block(a,block_mm,n,m,i,j);
-                        printf("Block_mm[%d,%d] in thread %d\n",i,j,thr);
-                        printlxn(block_mm,m,m,m,r);
-                    
-                // else
-                //     {
-                //         get_block_ml(a,block_ml,n,m,l,i);
-                //         printf("Block_ml[%d,%d] in thread %d\n",i,j,thr);
-                //         printlxn(block_ml,m,m,l,r);
-                //     }
-
-                
-
-                
-
-                // pthread_barrier_wait(barrier);
-                // printlxn(invblock_mm,m,m,m,m);
+            for(int j = startzone ; j < endzone ; j++)
+            {
+                get_block(a,block_mm,n,m,i,j);
+                // printf("Block[%d,%d]\n",i,j);
+                // printlxn(block_mm,m,m,m,m);
 
                 if(inverse(invblock_mm,block_mm,m,eps))
+                {
+                    if(normofmatrix(invblock_mm,m) < locmin) 
                     {
-
-                            // printlxn(invblock_mm,m,m,m,r);
-    //                     cout<<"inverse "<<i<<" "<<j<<" with norm = "<<normofmatrix(invblock_mm,m)<<endl;
-    // // 
-    //                 printlxn(invblock_mm,m,m,m,r);
-                    pthread_mutex_lock(mutex);
-                    if(normofmatrix(invblock_mm,m) < minNorm) 
-                        {
-                            
-                            minNorm = normofmatrix(invblock_mm,m);
-                            localmainBlock = j;
-                            mainblocks[thr] = localmainBlock;
-                            minnorms[thr] = minNorm;
-                            printf("minNorm = %lf localmainBlock = %d in thread %d block[%d,%d]\n",minNorm,localmainBlock,thr,i,j);
-                        }
-                    pthread_mutex_unlock(mutex);
-
+                        
+                        locmin = normofmatrix(invblock_mm,m);
+                        localMainBlock = j;
+                        mainblocks[thr] = localMainBlock;
+                        minnorms[thr] = locmin;
+                       
                     }
-                
                 }
             }
-            
-        pthread_barrier_wait(barrier);
-        }
-        else
-        {
-            
-            get_block(a,block_ll,n,m,k,k);
-            printf("YA TUT\n");
-            
 
-            if(!inverse(invblock_ll,block_ll,l,eps))
-            {
-                printf("Block [%d,%d] (block[l,l] in our matrix)  has no inverse after the transformations\n",k,k);
-                delete []block_mm ;
-                delete []block_ml ;
-                delete []block_ll ;
-                delete []tmpblock_mm ;
-                delete []tmpblock_ml ;
-                delete []tmpblock_ml1 ;
-                delete []tmpblock_ll ;
-                delete []invblock_mm ;
-                delete []invblock_ll ;
-                delete []diagblock_mm ;
-                delete []diaginvblock_mm ;
-                delete []vecb_m ;
-                delete []vecb_l ;
-                delete []tmpvecb_m ;
-                delete []tmpvecb_l ; 
-                delete []colsw ;
-                // pthread_barrier_wait(barrier);
-                // pthread_barrier_wait(barrier);
-                // pthread_barrier_wait(barrier);
-                return (void*)-1;
-            }
-//             printlxn(invblock_ll,l,l,l,l);
-            minNorm = normofmatrix(invblock_ll,l);
             pthread_barrier_wait(barrier);
-            
-        }
 
-        pthread_barrier_wait(barrier); // bar 1
-
-        
-        double locmin = 1e64;
-        for(int q = 0 ;q<p; q++)
-        {
-            
-            if(locmin > minnorms[q] && minnorms[q]>1e-16)
+            locmin = 1e64;
+            for(int q = 0; q < p; q++) // if row have not mainblock
             {
-                locmin = minnorms[q];
-                mainBlock = mainblocks[q];
+                int cc = 0;
+                if(mainblocks[q] == -1)
+                        cc++;
+                if(cc == p)
+                {    
+                    printf("Have no main block in row %d\n",i);
+                    clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
+                    isout = true;
+                    return (void*)(-1);
+                }
+
+                
+                if(locmin > minnorms[q] && minnorms[q]>eps)
+                    {
+                        locmin = minnorms[q];
+                        mainBlock = mainblocks[q];
+                        minNorm = minnorms[q];
+                    }
+
             }
-        }
-        
 
-        pthread_barrier_wait(barrier); // bar 2
+            pthread_barrier_wait(barrier);
 
-        if(thr == 0) printf("global mainBlock = %d [i = %d]\n",mainBlock,i);
+            if(thr == 0) 
+            {    
+            printf("global mainBlock = %d global minNorm = %lf [i = %d]\n",mainBlock,minNorm,i);
+            printf("mainBlock :\n");
+            get_block(a,block_mm,n,m,i,mainBlock);
+            printlxn(block_mm,m,m,m,r);
+            printf("invmainBlock :\n");
+            inverse(invblock_mm,block_mm,m,eps);
+            printlxn(invblock_mm,m,m,m,r);
+            // printf("block[%d,%d] :\n",1,0);
+            // get_block(a,block_mm,n,m,1,0);
+            // printlxn(block_mm,m,m,m,r);
+            // inverse(invblock_mm,block_mm,m,eps);
+            // printf("block[%d,%d] norm = %lf :\n",1,0,normofmatrix(invblock_mm,m));
+            // printlxn(invblock_mm,m,m,m,r);
+            }
 
-        if((fabs(minNorm - 1e64) < eps))
-        {   
-            if(i!=0)
+            if((fabs(minNorm - 1e64) < eps))
+            {   
+                if(i!=0)
                 {
                     printf("No inverse matrix in row %d after the transformations in thread %d\n",i,thr);
                     // cout<<"\n MATRIX A :\n";
                     // printlxn(a,n,n,n,r);
+                    isout = true;
                 }
-            else
-                printf("No inverse matrix in row %d\n",i);
-            delete []block_mm ;
-            delete []block_ml ;
-            delete []block_ll ;
-            delete []tmpblock_mm ;
-            delete []tmpblock_ml ;
-            delete []tmpblock_ml1 ;
-            delete []tmpblock_ll ;
-            delete []invblock_mm ;
-            delete []invblock_ll ;
-            delete []diagblock_mm ;
-            delete []diaginvblock_mm ;
-            delete []vecb_m ;
-            delete []vecb_l ;
-            delete []tmpvecb_m ;
-            delete []tmpvecb_l ; 
-            delete []colsw ;
-            // pthread_barrier_wait(barrier);
-            // pthread_barrier_wait(barrier);
-            // pthread_barrier_wait(barrier);
-            return (void*)-1;
-        }
+                else
+                    printf("No inverse matrix in row %d\n",i);
 
-        if(mainBlock != i && thr == 0)
+                clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
+
+                isout = true;
+            }
+
+            
+
+
+            if(mainBlock != i && thr == 0)
             {
                 swap_block_columns(a,n,m,i,mainBlock);
                 // printlxn(a,n,n,n,n);
                 swap(colsw[i],colsw[mainBlock]);
-                // cout<<"swapped "<< i<<" "<<mainBlock<<" in row "<<i<<endl;
+                cout<<"swapped "<< i<<" "<<mainBlock<<" in row "<<i<<endl;
             }
-        
-        
-        // printlxn(a,n,n,n,n);
-        // cout<<"TEST1"<<endl;
-        pthread_barrier_wait(barrier);
-        printf("IM HERE IN THREAD %d IN STEP %d\n",thr,i);
 
-        if(i<k)
-        {
+            pthread_barrier_wait(barrier);
+
+            //start multiplication
+
             get_block(a,diagblock_mm,n,m,i,i);
-            
+
             if(!(inverse(diaginvblock_mm,diagblock_mm,m,eps)))
             {
-                        printf("no blocks in row has inverse block\n");
-                        delete []block_mm ;
-                        delete []block_ml ;
-                        delete []block_ll ;
-                        delete []tmpblock_mm ;
-                        delete []tmpblock_ml ;
-                        delete []tmpblock_ml1 ;
-                        delete []tmpblock_ll ;
-                        delete []invblock_mm ;
-                        delete []invblock_ll ;
-                        delete []diagblock_mm ;
-                        delete []diaginvblock_mm ;
-                        delete []vecb_m ;
-                        delete []vecb_l ;
-                        delete []tmpvecb_m ;
-                        delete []tmpvecb_l ; 
-                        delete []colsw ;
-                        // pthread_barrier_wait(barrier);
-                        return (void*)-1;
+                printf("no blocks in row has inverse block\n");
+                // CLEAR;
+                isout = true;
             }
 
-            if(i == k%p)
+            pthread_barrier_wait(barrier);
+
+            if(isout)
             {
-            get_vec_block(b,vecb_m,n,m,i);
-            mat_x_vector(tmpvecb_m,diaginvblock_mm,vecb_m,m);// double *resvec = mat_x_vector(diaginvblock_mm,vecb_m,m);
-            // cout<<"tmpvecb_m : "<<endl;
-            // printlxn(tmpvecb_m,m,1,m,m);    
-            set_vec_block(b,tmpvecb_m,n,m,i);
+                CLEAR;
+                return (void*)-1;
             }
-            
-            startzone = (i + tcol*(thr) > k ? k:i + tcol*(thr));
-            endzone =  (thr != p-1 ? i + tcol*(thr+1): i + tcol*(thr+1)  ) ;
 
-             printf("NEW In thread %d startzone = %d endzone = %d k = %d\n",thr,startzone,endzone,k);
+            
+
+            if(thr == 0)
+            {
+                get_vec_block(b,vecb_m,n,m,i);
+                mat_x_vector(tmpvecb_m,diaginvblock_mm,vecb_m,m);// double *resvec = mat_x_vector(diaginvblock_mm,vecb_m,m);
+                // cout<<"tmpvecb_m : "<<endl;
+                // printlxn(tmpvecb_m,m,1,m,m);    
+                set_vec_block(b,tmpvecb_m,n,m,i);
+            }
+
+            pthread_barrier_wait(barrier);
+
+            
 
             for(int j = startzone ; j < endzone ; j++) //mb try j = i
             {
-               get_block(a,block_mm,n,m,i,j);
+                // pthread_mutex_lock(mutex);
+                get_block(a,block_mm,n,m,i,j);
                 
-               multiplication(tmpblock_mm,diaginvblock_mm,block_mm,m,m,m);// matmult(tmpblock_mm,diaginvblock_mm,block_mm,m,m,m);// double *resmult = matmult(diaginvblock_mm,block_mm,m,m,m)
+                multiplication(tmpblock_mm,diaginvblock_mm,block_mm,m,m,m);// matmult(tmpblock_mm,diaginvblock_mm,block_mm,m,m,m);// double *resmult = matmult(diaginvblock_mm,block_mm,m,m,m)
 
-               set_block(a,tmpblock_mm,n,m,i,j);
+                set_block(a,tmpblock_mm,n,m,i,j);
                 
-                            if (!block_mm || !vecb_m || !invblock_mm) {
-                fprintf(stderr, "Error: temporary buffers not initialized!\n");
-                delete []block_mm ;
-                delete []block_ml ;
-                delete []block_ll ;
-                delete []tmpblock_mm ;
-                delete []tmpblock_ml ;
-                delete []tmpblock_ml1 ;
-                delete []tmpblock_ll ;
-                delete []invblock_mm ;
-                delete []invblock_ll ;
-                delete []diagblock_mm ;
-                delete []diaginvblock_mm ;
-                delete []vecb_m ;
-                delete []vecb_l ;
-                delete []tmpvecb_m ;
-                delete []tmpvecb_l ; 
-                delete []colsw ;
-                // pthread_barrier_wait(barrier);
-                return  (void*)-1;
+                if (!block_mm || !vecb_m || !invblock_mm) 
+                {
+                    fprintf(stderr, "Error: temporary buffers not initialized!\n");
+                    // CLEAR;
+                    // return (void*)-1;
+                    isout = true;
                 }
+                // pthread_mutex_unlock(mutex);
             }
-            // printlxn(a,n,n,n,n);
-            if(is_l != 0)
+            if(is_l != 0 && thr == 0)
             {
                 get_block_ml(a,block_ml,n,m,l,i);
                 multiplication(tmpblock_ml,diaginvblock_mm,block_ml,m,m,l);// matmult(tmpblock_ml,diaginvblock_mm,block_ml,m,m,l);
                 set_block_ml(a,tmpblock_ml,n,m,l,i);
             }
-            
-        }else if(i == k && thr == k%p)
-            {   
-                // printlxn(a,n,n,n,n);
-                // printlxn(b,n,1,n,n);
-                get_block(a,block_ll,n,m,i,i);
-                get_vec_block(b,vecb_l,n,m,i);
 
-                // printlxn(block_ll,l,l,l,n);
+            pthread_barrier_wait(barrier);
 
-                // cout<<"vecb_l:"<<endl;
-                // printlxn(vecb_l,l,1,l,n);
-
-                if(!(inverse(invblock_ll,block_ll,l,eps)))
-                    {
-                        printf("ll block has no inverse in thread %d\n",thr);
-                        delete []block_mm ;
-                        delete []block_ml ;
-                        delete []block_ll ;
-                        delete []tmpblock_mm ;
-                        delete []tmpblock_ml ;
-                        delete []tmpblock_ml1 ;
-                        delete []tmpblock_ll ;
-                        delete []invblock_mm ;
-                        delete []invblock_ll ;
-                        delete []diagblock_mm ;
-                        delete []diaginvblock_mm ;
-                        delete []vecb_m ;
-                        delete []vecb_l ;
-                        delete []tmpvecb_m ;
-                        delete []tmpvecb_l ; 
-                        delete []colsw ;
-                        // pthread_barrier_wait(barrier);
-                        return  (void*)-1;
-                    }
-
-                
-                // printlxn(invblock_ll,l,l,l,n);
-
-                multiplication(tmpblock_ll,invblock_ll,block_ll,l,l,l);// matmult(tmpblock_ll,invblock_ll,block_ll,l,l,l);
-
-                mat_x_vector(tmpvecb_l,invblock_ll,vecb_l,l);
-                
-                // printlxn(tmpvecb_l,l,1,l,n);
-
-                set_block(a,tmpblock_ll,n,m,i,i);
-                set_vec_block(b,tmpvecb_l,n,m,i);
-                // cout<<"WE ARE IN i = k"<<endl;
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
             }
 
+            
+
+            if(thr == 0 && i == 0) 
+                {
+                    printf("Matrix A after mult \n");
+                    printlxn(a,n,n,n,r);
+                }
+        
+        }
+        else //if(i == k && thr == 0) uncomm later when i do subtract 
+        {   
             // printlxn(a,n,n,n,n);
             // printlxn(b,n,1,n,n);
-            //начинаем обнулять столбцы
-            
-        for(int r = i+1 ; r < k + is_l ; r++)
-        {
-            // cout<<"TEST "<<r<<endl;
-            if(r < k)
-            {
-                get_block(a,block_mm,n,m,r,i);
-                get_block(a,tmpblock_mm,n,m,r,i);
-                memset(tmpblock_mm,0, m*m*sizeof(double));
-                set_block(a,tmpblock_mm,n,m,r,i);
+            if(thr==0)
+            {           
+            get_block(a,block_ll,n,m,i,i);
+            get_vec_block(b,vecb_l,n,m,i);
 
-                // not in i for
-                get_vec_block(b,vecb_m,n,m,i);//вычитание из вектора b block_mm*b
-                get_vec_block(b,tmpvecb_m,n,m,r);
-                vec_mult_sub(tmpvecb_m,block_mm,vecb_m,m);
-                set_vec_block(b,tmpvecb_m,n,m,r);
+            printf("Block ll :\n");
+            printlxn(block_ll,l,l,l,n);
+
+            // cout<<"vecb_l:"<<endl;
+            // printlxn(vecb_l,l,1,l,n);
+
+            if(!(inverse(invblock_ll,block_ll,l,eps)))
+                {
+                    printf("ll block has no inverse\n");
+                    // CLEAR; // нужно сделать не выход ретурн -1 а завести флаг по которому потом выйдут одновременно все потоки а то будет DL
+                    isout = true;
+                }
+
+            
+            // printlxn(invblock_ll,l,l,l,n);
+
+            multiplication(tmpblock_ll,invblock_ll,block_ll,l,l,l);// matmult(tmpblock_ll,invblock_ll,block_ll,l,l,l);
+
+            mat_x_vector(tmpvecb_l,invblock_ll,vecb_l,l);
+            
+            // printlxn(tmpvecb_l,l,1,l,n);
+
+            set_block(a,tmpblock_ll,n,m,i,i);
+            set_vec_block(b,tmpvecb_l,n,m,i);
+            }
+            cout<<"WE ARE IN i = k"<<endl;
+            pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
+        }
+
+
+        pthread_barrier_wait(barrier);
+
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
+            }
+
+        if(thr == 0 && i == 0) 
+                {
+                    printf("Matrix A before subtr \n");
+                    printlxn(a,n,n,n,r);
+                }
+        pthread_barrier_wait(barrier);
+
+        for(int rr = i+1 ; rr < k + is_l ; rr++)
+        {
+            if(rr < k)
+            {   get_block(a,block_mm,n,m,rr,i);
+                
+
+                pthread_barrier_wait(barrier);
+
+                // pthread_mutex_lock(mutex);
+                get_block(a,tmpblock_mm,n,m,rr,i);
+                printf("tmpblock_mm before MEMSET:\n");
+                printlxn(tmpblock_mm,m,m,m,r);
+                memset(tmpblock_mm,0, m*m*sizeof(double));
+                set_block(a,tmpblock_mm,n,m,rr,i);
+                printf("A after MEMSET:\n");
+                printlxn(a,n,n,n,r);
+                // pthread_mutex_unlock(mutex);
+
+                pthread_barrier_wait(barrier);
+
+                pthread_mutex_lock(mutex);
+                
+
+                if(thr == 0)
+                {
+                    
+
+                    // not in i for
+                    get_vec_block(b,vecb_m,n,m,i);//вычитание из вектора b block_mm*b
+                    get_vec_block(b,tmpvecb_m,n,m,rr);
+                    vec_mult_sub(tmpvecb_m,block_mm,vecb_m,m);
+                    set_vec_block(b,tmpvecb_m,n,m,rr);
+                }
 
                 // cout<<"tmpvecb_m in subtract i= "<<i<<" r="<<r<<endl;
                 // printlxn(tmpvecb_m,m,1,m,m);
                 // printlxn(b,n,1,n,n);
 
-                for (int j = i + 1; j < k; j++) {
+                for (int j = (startzone == i ? i +1: startzone); j < endzone; j++) { //(int j = i + 1; j < k; j++)
+                    
                     get_block(a,invblock_mm,n,m,i,j);
-                    get_block(a,diagblock_mm,n,m,r,j);
+                    get_block(a,diagblock_mm,n,m,rr,j);
                     mat_mult_sub(diagblock_mm,block_mm,invblock_mm,m,m,m);
-                    set_block(a,diagblock_mm,n,m,r,j);
+                    set_block(a,diagblock_mm,n,m,rr,j);
+                    
                 }
+                pthread_mutex_unlock(mutex);
 
-                if (is_l!= 0) {
+                if (is_l!= 0 && thr == 0) {
                 get_block_ml(a,tmpblock_ml,n,m,l,i);
-                get_block_ml(a,tmpblock_ml1,n,m,l,r);
+                get_block_ml(a,tmpblock_ml1,n,m,l,rr);
                 mat_mult_sub(tmpblock_ml1,block_mm,tmpblock_ml,m,l,m);
-                set_block_ml(a,tmpblock_ml1,n,m,l,r);
+                set_block_ml(a,tmpblock_ml1,n,m,l,rr);
                 }
-            }else
+            }
+            else //if(rr == k && thr == 0)
             {
                 // printlxn(a,n,n,n,n);
-               get_block_lm(a, block_ml, n, m, l, i);
+                if(thr == 0)
+                {
+                get_block_lm(a, block_ml, n, m, l, i);
 
             //    printf("block_lm in col %d\n",i);
             //    printlxn(block_ml,m,l,m,n);
@@ -1734,9 +1706,9 @@ void* parallelSolve1(void* ptr)
                get_vec_block(b,vecb_m,n,m,i);// get_vec_block(b,vecb_m,n,m,i);//вычитание из вектора b block_mm*b
             //    cout<<"vecb_m in subtract i= "<<i<<" r="<<r<<endl;
             //     printlxn(vecb_m,m,1,m,m);
-               get_vec_block(b,tmpvecb_l,n,m,r);// get_vec_block(b,tmpvecb_m,n,m,r);
+               get_vec_block(b,tmpvecb_l,n,m,rr);// get_vec_block(b,tmpvecb_m,n,m,r);
                vec_mult_sub_lm(tmpvecb_l,block_ml,vecb_m,l,m);// vec_mult_sub(tmpvecb_m,block_mm,vecb_m,m);
-               set_vec_block(b,tmpvecb_l,n,m,r);  // set_vec_block(b,tmpvecb_m,n,m,r);
+               set_vec_block(b,tmpvecb_l,n,m,rr);  // set_vec_block(b,tmpvecb_m,n,m,r);
 
 
                 for(int j = i + 1; j < k; j++) {
@@ -1753,6 +1725,7 @@ void* parallelSolve1(void* ptr)
                 // get_vec_block(b,tmpvecb_m,n,m,r);//
                 vec_mult_sub_lm(tmpvecb_m,block_ml,vecb_m,l,m);//
                 set_block_lm(a, tmpblock_ml, n, m, l, j);
+                }
                 // set_vec_block(b,tmpvecb_m,n,m,r);//set_vec...
                 }
 
@@ -1764,48 +1737,68 @@ void* parallelSolve1(void* ptr)
                 }
 
             }
-            
+            pthread_barrier_wait(barrier);
+            if(thr == 0)
+            {
+                printf("Matrix A afther subtr: \n");
+                printlxn(a,n,n,n,r);
+            }
         }
-
-        // cout<<"LAST PRINT"<<endl;
-        // printlxn(a,n,n,n,n);
-        // printlxn(b,n,1,n,n);
-         
-        
     }
-    //end straight alg
 
-    // pthread_barrier_wait(barrier); // uncom potom
-
+    pthread_barrier_wait(barrier);
     if(thr == 0)
     {
-    cout<<"\n MATRIX A :\n";
-    printlxn(a,n,n,n,r);
+        printf("Matrix A AFTER ALL OPERATIONS: \n");
+        printlxn(a,n,n,n,r);
+        printf("Vector b AFTER ALL OPERATIONS: \n");
+        printlxn(b,n,1,n,r);
     }
 
+    
     //start reverse alg
+        
+    if(thr == 0)
+    {
+            for(int i = n-1; i >= 0 ; i--)
+        {
+            if(i == n-1) x[i] = b[i];
+            
+            else
+            {
+                x[i] = b[i];
+                for(int j = n-1 ; j >i;j--)
+                {
+                    x[i] -= a[i*n + j]*x[j];
+                }
+            }
+        }
+
+        // cout<<"Vector x before swap :"<<endl;
+        // printlxn(x,n,1,n,n);
+
+        
+
+        for(int i = 0 ; i < k ; i++)
+        {
+            
+
+            if(i != colsw[i]){ 
+                int t;
+                swap_block_vec(x,n,m,i,colsw[i]);
+                t = colsw[colsw[i]];
+                colsw[colsw[i]] = colsw[i];
+                colsw[i] = t; 
+            }
 
 
+        }
+    }
 
     // tut osvobozdaem memory allocated in thread
-    delete []block_mm ;
-    delete []block_ml ;
-    delete []block_ll ;
-    delete []tmpblock_mm ;
-    delete []tmpblock_ml ;
-    delete []tmpblock_ml1 ;
-    delete []tmpblock_ll ;
-    delete []invblock_mm ;
-    delete []invblock_ll ;
-    delete []diagblock_mm ;
-    delete []diaginvblock_mm ;
-    delete []vecb_m ;
-    delete []vecb_l ;
-    delete []tmpvecb_m ;
-    delete []tmpvecb_l ; 
-    delete []colsw ;
+    CLEAR;
 
-    // pthread_barrier_wait(barrier);
+    pthread_barrier_wait(barrier);
 
     return nullptr;
 }
@@ -2364,6 +2357,7 @@ void* parallelSolve(void* ptr)
 
         startzone = (startzone <= k ? startzone:k);
         endzone = (endzone <= k ? endzone:k);
+        if(thr == p - 1 && is_l == 0) endzone++;
 
         // printf("IN THREAD %d startzone = %d endzone = %d\n",thr,startzone,endzone);
         if(i != k)
@@ -2399,7 +2393,7 @@ void* parallelSolve(void* ptr)
                 if(cc == p)
                 {    
                     printf("Have no main block in row %d\n",i);
-                    clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
+                    // clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
                     isout = true;
                     return (void*)(-1);
                 }
@@ -2416,22 +2410,28 @@ void* parallelSolve(void* ptr)
 
             pthread_barrier_wait(barrier);
 
-            if(thr == 0) 
-            {    
-            printf("global mainBlock = %d global minNorm = %lf [i = %d]\n",mainBlock,minNorm,i);
-            printf("mainBlock :\n");
-            get_block(a,block_mm,n,m,i,mainBlock);
-            printlxn(block_mm,m,m,m,r);
-            printf("invmainBlock :\n");
-            inverse(invblock_mm,block_mm,m,eps);
-            printlxn(invblock_mm,m,m,m,r);
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
+            }
+
+            // if(thr == 0) 
+            // {    
+            // printf("global mainBlock = %d global minNorm = %lf [i = %d]\n",mainBlock,minNorm,i);
+            // printf("mainBlock :\n");
+            // get_block(a,block_mm,n,m,i,mainBlock);
+            // printlxn(block_mm,m,m,m,r);
+            // printf("invmainBlock :\n");
+            // inverse(invblock_mm,block_mm,m,eps);
+            // printlxn(invblock_mm,m,m,m,r);
             // printf("block[%d,%d] :\n",1,0);
             // get_block(a,block_mm,n,m,1,0);
             // printlxn(block_mm,m,m,m,r);
             // inverse(invblock_mm,block_mm,m,eps);
             // printf("block[%d,%d] norm = %lf :\n",1,0,normofmatrix(invblock_mm,m));
             // printlxn(invblock_mm,m,m,m,r);
-            }
+            // }
 
             if((fabs(minNorm - 1e64) < eps))
             {   
@@ -2445,23 +2445,36 @@ void* parallelSolve(void* ptr)
                 else
                     printf("No inverse matrix in row %d\n",i);
 
-                clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
+                // clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
 
                 isout = true;
             }
 
-            
-
+            pthread_barrier_wait(barrier);
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
+            }
 
             if(mainBlock != i && thr == 0)
             {
                 swap_block_columns(a,n,m,i,mainBlock);
                 // printlxn(a,n,n,n,n);
                 swap(colsw[i],colsw[mainBlock]);
-                cout<<"swapped "<< i<<" "<<mainBlock<<" in row "<<i<<endl;
+                // cout<<"swapped "<< i<<" "<<mainBlock<<" in row "<<i<<endl;
+            }else if(mainBlock == -1)
+            {
+                printf("NO mainblock in row %d\n",i);
+                isout = true;
             }
 
             pthread_barrier_wait(barrier);
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
+            }
 
             //start multiplication
 
@@ -2469,8 +2482,8 @@ void* parallelSolve(void* ptr)
 
             if(!(inverse(diaginvblock_mm,diagblock_mm,m,eps)))
             {
-                printf("no blocks in row has inverse block\n");
-                CLEAR;
+                printf("no blocks in row has inverse block i = %d\n",i);
+                // CLEAR;
                 isout = true;
             }
 
@@ -2486,12 +2499,17 @@ void* parallelSolve(void* ptr)
             }
 
             pthread_barrier_wait(barrier);
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
+            }
 
             
 
             for(int j = startzone ; j < endzone ; j++) //mb try j = i
             {
-                pthread_mutex_lock(mutex);
+                // pthread_mutex_lock(mutex);
                 get_block(a,block_mm,n,m,i,j);
                 
                 multiplication(tmpblock_mm,diaginvblock_mm,block_mm,m,m,m);// matmult(tmpblock_mm,diaginvblock_mm,block_mm,m,m,m);// double *resmult = matmult(diaginvblock_mm,block_mm,m,m,m)
@@ -2501,11 +2519,13 @@ void* parallelSolve(void* ptr)
                 if (!block_mm || !vecb_m || !invblock_mm) 
                 {
                     fprintf(stderr, "Error: temporary buffers not initialized!\n");
-                    CLEAR;
+                    // CLEAR;
                     return (void*)-1;
                 }
-                pthread_mutex_unlock(mutex);
+                // pthread_mutex_unlock(mutex);
             }
+
+            
             if(is_l != 0 && thr == 0)
             {
                 get_block_ml(a,block_ml,n,m,l,i);
@@ -2515,26 +2535,32 @@ void* parallelSolve(void* ptr)
 
             pthread_barrier_wait(barrier);
 
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
+            }
             
 
-            if(thr == 0 && i == 0) 
-                {
-                    printf("Matrix A after mult \n");
-                    printlxn(a,n,n,n,r);
-                }
+            // if(thr == 0 && i == 0) 
+            //     {
+            //         printf("Matrix A after mult \n");
+            //         printlxn(a,n,n,n,r);
+            //     }
         
         }
         else //if(i == k && thr == 0) uncomm later when i do subtract 
         {   
             // printlxn(a,n,n,n,n);
             // printlxn(b,n,1,n,n);
-            if(thr==0)
-            {           
+            // if(thr==0)
+            // {           
+            pthread_barrier_wait(barrier);
             get_block(a,block_ll,n,m,i,i);
             get_vec_block(b,vecb_l,n,m,i);
 
-            printf("Block ll :\n");
-            printlxn(block_ll,l,l,l,n);
+            // printf("Block ll :\n");
+            // printlxn(block_ll,l,l,l,n);
 
             // cout<<"vecb_l:"<<endl;
             // printlxn(vecb_l,l,1,l,n);
@@ -2542,7 +2568,7 @@ void* parallelSolve(void* ptr)
             if(!(inverse(invblock_ll,block_ll,l,eps)))
                 {
                     printf("ll block has no inverse\n");
-                    CLEAR; // нужно сделать не выход ретурн -1 а завести флаг по которому потом выйдут одновременно все потоки а то будет DL
+                    // CLEAR; // нужно сделать не выход ретурн -1 а завести флаг по которому потом выйдут одновременно все потоки а то будет DL
                     isout = true;
                 }
 
@@ -2557,8 +2583,8 @@ void* parallelSolve(void* ptr)
 
             set_block(a,tmpblock_ll,n,m,i,i);
             set_vec_block(b,tmpvecb_l,n,m,i);
-            }
-            cout<<"WE ARE IN i = k"<<endl;
+            // }
+            // cout<<"WE ARE IN i = k"<<endl;
             pthread_barrier_wait(barrier);
             // pthread_barrier_wait(barrier);
             // pthread_barrier_wait(barrier);
@@ -2568,41 +2594,45 @@ void* parallelSolve(void* ptr)
 
         pthread_barrier_wait(barrier);
 
-        if(isout) // exit
+            if(isout)
+            {
+                CLEAR;
                 return (void*)-1;
+            }
 
-        if(thr == 0 && i == 0) 
-                {
-                    printf("Matrix A before subtr \n");
-                    printlxn(a,n,n,n,r);
-                }
+        // if(thr == 0 && i == 0) 
+        //         {
+        //             printf("Matrix A before subtr \n");
+        //             printlxn(a,n,n,n,r);
+        //         }
         pthread_barrier_wait(barrier);
 
-        for(int rr = i+1 ; rr < k + is_l ; rr++)
+        for(int rr = thr + i+1 ; rr < k + is_l ; rr+=p)
         {
             if(rr < k)
-            {   get_block(a,block_mm,n,m,rr,i);
+            {  
+                get_block(a,block_mm,n,m,rr,i);
                 
 
-                pthread_barrier_wait(barrier);
+                // pthread_barrier_wait(barrier);
 
-                pthread_mutex_lock(mutex);
+                // pthread_mutex_lock(mutex);
                 get_block(a,tmpblock_mm,n,m,rr,i);
-                printf("tmpblock_mm before MEMSET:\n");
-                printlxn(tmpblock_mm,m,m,m,r);
+                // printf("tmpblock_mm before MEMSET:\n");
+                // printlxn(tmpblock_mm,m,m,m,r);
                 memset(tmpblock_mm,0, m*m*sizeof(double));
                 set_block(a,tmpblock_mm,n,m,rr,i);
-                printf("A after MEMSET:\n");
-                printlxn(a,n,n,n,r);
-                pthread_mutex_unlock(mutex);
+                // printf("A after MEMSET:\n");
+                // printlxn(a,n,n,n,r);
+                // pthread_mutex_unlock(mutex);
 
-                pthread_barrier_wait(barrier);
+                // pthread_barrier_wait(barrier);
 
-                pthread_mutex_lock(mutex);
+                // pthread_mutex_lock(mutex); // mb delete need test
                 
 
-                if(thr == 0)
-                {
+                // if(thr == 0)
+                // {
                     
 
                     // not in i for
@@ -2610,13 +2640,13 @@ void* parallelSolve(void* ptr)
                     get_vec_block(b,tmpvecb_m,n,m,rr);
                     vec_mult_sub(tmpvecb_m,block_mm,vecb_m,m);
                     set_vec_block(b,tmpvecb_m,n,m,rr);
-                }
+                // }
 
                 // cout<<"tmpvecb_m in subtract i= "<<i<<" r="<<r<<endl;
                 // printlxn(tmpvecb_m,m,1,m,m);
                 // printlxn(b,n,1,n,n);
 
-                for (int j = (startzone == i ? i +1: startzone); j < endzone; j++) { //(int j = i + 1; j < k; j++)
+                for (int j = i + 1; j < k; j++) { //(int j = i + 1; j < k; j++)
                     
                     get_block(a,invblock_mm,n,m,i,j);
                     get_block(a,diagblock_mm,n,m,rr,j);
@@ -2624,9 +2654,9 @@ void* parallelSolve(void* ptr)
                     set_block(a,diagblock_mm,n,m,rr,j);
                     
                 }
-                pthread_mutex_unlock(mutex);
+                // pthread_mutex_unlock(mutex);
 
-                if (is_l!= 0 && thr == 0) {
+                if (is_l!= 0) {
                 get_block_ml(a,tmpblock_ml,n,m,l,i);
                 get_block_ml(a,tmpblock_ml1,n,m,l,rr);
                 mat_mult_sub(tmpblock_ml1,block_mm,tmpblock_ml,m,l,m);
@@ -2636,8 +2666,8 @@ void* parallelSolve(void* ptr)
             else //if(rr == k && thr == 0)
             {
                 // printlxn(a,n,n,n,n);
-                if(thr == 0)
-                {
+                // if(thr == 0)
+                // {
                 get_block_lm(a, block_ml, n, m, l, i);
 
             //    printf("block_lm in col %d\n",i);
@@ -2669,7 +2699,7 @@ void* parallelSolve(void* ptr)
                 // get_vec_block(b,tmpvecb_m,n,m,r);//
                 vec_mult_sub_lm(tmpvecb_m,block_ml,vecb_m,l,m);//
                 set_block_lm(a, tmpblock_ml, n, m, l, j);
-                }
+                // }
                 // set_vec_block(b,tmpvecb_m,n,m,r);//set_vec...
                 }
 
@@ -2681,23 +2711,30 @@ void* parallelSolve(void* ptr)
                 }
 
             }
-            pthread_barrier_wait(barrier);
-            if(thr == 0)
-            {
-                printf("Matrix A afther subtr: \n");
-                printlxn(a,n,n,n,r);
-            }
+            // pthread_barrier_wait(barrier);
+            // if(thr == 0)
+            // {
+            //     printf("Matrix A after subtr: \n");
+            //     printlxn(a,n,n,n,r);
+            // }
         }
     }
 
     pthread_barrier_wait(barrier);
-    if(thr == 0)
-    {
-        printf("Matrix A AFTER ALL OPERATIONS: \n");
-        printlxn(a,n,n,n,r);
-        printf("Vector b AFTER ALL OPERATIONS: \n");
-        printlxn(b,n,1,n,r);
-    }
+
+            if(isout)
+            {
+                CLEAR;
+                return (void*)-1;
+            }
+
+    // if(thr == 0)
+    // {
+    //     printf("Matrix A AFTER ALL OPERATIONS: \n");
+    //     printlxn(a,n,n,n,r);
+    //     printf("Vector b AFTER ALL OPERATIONS: \n");
+    //     printlxn(b,n,1,n,r);
+    // }
 
     
     //start reverse alg
@@ -2738,11 +2775,52 @@ void* parallelSolve(void* ptr)
 
         }
     }
-
+    pthread_barrier_wait(barrier);
     // tut osvobozdaem memory allocated in thread
     CLEAR;
 
-    pthread_barrier_wait(barrier);
+    if(name)
+    {
+
+        // printf("YA TUT IN THREAD %d",thr);
+        static int res = 0;
+        if(thr == 0)
+        {
+            res = readarray(a,n,name);
+        }
+
+        pthread_barrier_wait(barrier);
+
+        if(res < 0) //tut kazdui thread dolzen znat chto res < 0
+        {
+            printf("File %s is bad\n",name);
+            return (void*)-1;
+        }
+
+    }else
+    {
+        pllinit_matrix(a,s,n,m,thr,p);
+        // pthread_barrier_wait(barrier);
+    }
+    // tut osvobozdaem memory allocated in thread
+
+    // if(thr == 0)
+    // {
+        
+    // cout<<"\n MATRIX A REINIT :\n";
+    // printlxn(a,n,n,n,r);
+
+    // }
+   
+
+    // if(thr == 0) cout<<"\nVector b REINIT : \n";
+
+    pllinit_vectorb(b,a,n,m,thr,p);
+    
+    // if(thr == 0) printlxn(b,n,1,n,r);
+
+
+    
 
     return nullptr;
 }
