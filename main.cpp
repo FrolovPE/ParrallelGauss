@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
         }
 
         elapsed = get_full_time() - elapsed;
-        printf("CPU Time thread %d = %.2lf\n",thr,elapsed);
+        // printf("CPU Time thread %d = %.2lf\n",thr,elapsed);
     }
 
     auto end_sol= std::chrono::high_resolution_clock::now();

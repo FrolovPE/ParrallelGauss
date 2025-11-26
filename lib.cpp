@@ -2267,9 +2267,7 @@ void* parallelSolve(void* ptr)
 
     // parallelSolve(...)
 
-    t = get_cpu_time() - t;
-
-    ap->time =t;
+    
 
     
 
@@ -2332,7 +2330,7 @@ void* parallelSolve(void* ptr)
 
    
 
-    int tcol = (k<p ? 1:k/p);//how many blocks thread have
+    // int tcol = (k + is_l<p ? 1:(k+is_l)/p);//how many blocks thread have
     static int mainBlock = -1;
 
     for(int c =0; c < k  ;c++) colsw[c]=c;
@@ -2352,17 +2350,18 @@ void* parallelSolve(void* ptr)
         int localMainBlock = i;
         (void)minNorm;
 
-        int startzone = i + tcol*thr;
-        int endzone = i+tcol*(thr + 1);
+        // int startzone = i + tcol*thr;
+        // int endzone = i+ tcol*(thr + 1);
 
-        startzone = (startzone <= k ? startzone:k);
-        endzone = (endzone <= k ? endzone:k);
-        if(thr == p - 1 && is_l == 0) endzone++;
+        // startzone = (startzone <= k ? startzone:k);
+        // endzone = (endzone <= k ? endzone:k);
+        // if(thr == p - 1 ) endzone+=;
+        // if(thr == p - 1 && is_l == 0) endzone++;
 
-        // printf("IN THREAD %d startzone = %d endzone = %d\n",thr,startzone,endzone);
+        // printf("IN THREAD %d startzone = %d endzone = %d i = %d\n",thr,startzone,endzone,i);
         if(i != k)
         {
-            for(int j = startzone ; j < endzone ; j++)
+            for(int j = i + thr ; j < k ; j+=p)
             {
                 get_block(a,block_mm,n,m,i,j);
                 // printf("Block[%d,%d]\n",i,j);
@@ -2512,7 +2511,7 @@ void* parallelSolve(void* ptr)
 
             
 
-            for(int j = startzone ; j < endzone ; j++) //mb try j = i
+            for(int j = thr + i ; j < k ; j+=p) //mb try j = i
             {
                 // pthread_mutex_lock(mutex);
                 get_block(a,block_mm,n,m,i,j);
@@ -2531,7 +2530,7 @@ void* parallelSolve(void* ptr)
             }
 
             
-            if(is_l != 0 && thr == 0)
+            if(is_l != 0 && thr == p-1)
             {
                 get_block_ml(a,block_ml,n,m,l,i);
                 multiplication(tmpblock_ml,diaginvblock_mm,block_ml,m,m,l);// matmult(tmpblock_ml,diaginvblock_mm,block_ml,m,m,l);
@@ -2580,17 +2579,17 @@ void* parallelSolve(void* ptr)
             
             // printlxn(invblock_ll,l,l,l,n);
 
-            // multiplication(tmpblock_ll,invblock_ll,block_ll,l,l,l);// matmult(tmpblock_ll,invblock_ll,block_ll,l,l,l);
+            multiplication(tmpblock_ll,invblock_ll,block_ll,l,l,l);// matmult(tmpblock_ll,invblock_ll,block_ll,l,l,l);
 
 
-            for(int ii = 0 ; ii < l; ii++)
-            {
-                for(int jj = 0 ; jj < l; jj++)
-                {
-                    if(ii != jj) block_ll[ii*l+jj] = 0;
-                    else block_ll[ii*l+jj] = 0;
-                }
-            }
+            // for(int ii = 0 ; ii < l; ii++)
+            // {
+            //     for(int jj = 0 ; jj < l; jj++)
+            //     {
+            //         if(ii != jj) block_ll[ii*l+jj] = 0;
+            //         else block_ll[ii*l+jj] = 1;
+            //     }
+            // }
 
             mat_x_vector(tmpvecb_l,invblock_ll,vecb_l,l);
             
@@ -2600,11 +2599,6 @@ void* parallelSolve(void* ptr)
             set_vec_block(b,tmpvecb_l,n,m,i);
             // }
             // cout<<"WE ARE IN i = k"<<endl;
-            // pthread_barrier_wait(barrier);
-            // pthread_barrier_wait(barrier);
-            // pthread_barrier_wait(barrier);
-            // pthread_barrier_wait(barrier);
-            // pthread_barrier_wait(barrier);
         }
 
         pthread_barrier_wait(barrier);
@@ -2622,7 +2616,7 @@ void* parallelSolve(void* ptr)
         //         }
         pthread_barrier_wait(barrier);
 
-        for(int rr = thr + i+1 ; rr < k + is_l ; rr+=p)
+        for(int rr = thr + i + 1 ; rr < k + is_l ; rr+=p)
         {
             if(rr < k)
             {  
@@ -2691,6 +2685,8 @@ void* parallelSolve(void* ptr)
                get_block_lm(a, tmpblock_ml, n, m, l, i);
                memset(tmpblock_ml,0,m*l*sizeof(double));
                set_block_lm(a, tmpblock_ml, n, m, l, i);
+
+            //    pthread_barrier_wait(barrier);
 
                get_vec_block(b,vecb_m,n,m,i);// get_vec_block(b,vecb_m,n,m,i);//вычитание из вектора b block_mm*b
             //    cout<<"vecb_m in subtract i= "<<i<<" r="<<r<<endl;
@@ -2835,7 +2831,11 @@ void* parallelSolve(void* ptr)
     // if(thr == 0) printlxn(b,n,1,n,r);
 
 
-    
+    t = get_cpu_time() - t;
+
+    ap->time =t;
+
+     printf("CPU Time thread %d = %.2lf\n",thr,ap->time);
 
     return nullptr;
 }
