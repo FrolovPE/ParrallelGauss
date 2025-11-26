@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
     // printf("n = %d m = %d p = %d r = %d s = %d\n",n,m,p,r,s);
 
-    
+    p = (n/m > p ? p:n/m);
 
     a = new double[n*n]; //create matrix a
     b = new double[n];  // create vector b
@@ -112,6 +112,8 @@ int main(int argc, char *argv[])
             delete []realx;
             delete []tid;
             delete []ap;
+            delete []mainblocks;
+            delete []minnorms;
             pthread_mutex_destroy(&mutex);
             pthread_barrier_destroy(&barrier);
 
@@ -133,6 +135,8 @@ int main(int argc, char *argv[])
             delete []realx;
             delete []tid;
             delete []ap;
+            delete []mainblocks;
+            delete []minnorms;
             pthread_mutex_destroy(&mutex);
             pthread_barrier_destroy(&barrier);
 
@@ -256,6 +260,10 @@ int main(int argc, char *argv[])
     delete []b;
     delete []x;
     delete []realx;
+    delete []ap;
+    delete []tid;
+    delete []mainblocks;
+    delete []minnorms;
 
     pthread_mutex_destroy(&mutex);
     pthread_barrier_destroy(&barrier);

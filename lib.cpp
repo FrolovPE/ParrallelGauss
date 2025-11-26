@@ -2385,29 +2385,32 @@ void* parallelSolve(void* ptr)
             pthread_barrier_wait(barrier);
 
             locmin = 1e64;
-            for(int q = 0; q < p; q++) // if row have not mainblock
+            if(thr == 0)
             {
-                int cc = 0;
-                if(mainblocks[q] == -1)
-                        cc++;
-                if(cc == p)
-                {    
-                    printf("Have no main block in row %d\n",i);
-                    // clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
-                    isout = true;
-                    return (void*)(-1);
-                }
-
-                
-                if(locmin > minnorms[q] && minnorms[q]>eps)
-                    {
-                        locmin = minnorms[q];
-                        mainBlock = mainblocks[q];
-                        minNorm = minnorms[q];
+                for(int q = 0; q < p; q++) // if row have not mainblock
+                {
+                    int cc = 0;
+                    if(mainblocks[q] == -1)
+                            cc++;
+                    if(cc == p)
+                    {    
+                        printf("Have no main block in row %d\n",i);
+                        // clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
+                        isout = true;
+                        return (void*)(-1);
                     }
 
-            }
+                    
+                    if(locmin > minnorms[q] /*&& minnorms[q]>eps*/)
+                        {
+                            locmin = minnorms[q];
+                            mainBlock = mainblocks[q];
+                            minNorm = minnorms[q];
+                            // printf("mainBlock = %d minNorm = %lf thread %d\n",mainBlock,minNorm,thr);
+                        }
 
+                }
+            }
             pthread_barrier_wait(barrier);
 
             if(isout)
@@ -2415,6 +2418,7 @@ void* parallelSolve(void* ptr)
                 CLEAR;
                 return (void*)-1;
             }
+            pthread_barrier_wait(barrier);
 
             // if(thr == 0) 
             // {    
@@ -2462,7 +2466,7 @@ void* parallelSolve(void* ptr)
                 swap_block_columns(a,n,m,i,mainBlock);
                 // printlxn(a,n,n,n,n);
                 swap(colsw[i],colsw[mainBlock]);
-                // cout<<"swapped "<< i<<" "<<mainBlock<<" in row "<<i<<endl;
+                cout<<"swapped "<< i<<" "<<mainBlock<<" in row "<<i<<endl;
             }else if(mainBlock == -1)
             {
                 printf("NO mainblock in row %d\n",i);
@@ -2483,6 +2487,7 @@ void* parallelSolve(void* ptr)
             if(!(inverse(diaginvblock_mm,diagblock_mm,m,eps)))
             {
                 printf("no blocks in row has inverse block i = %d\n",i);
+                // printlxn(a,n,n,n,r);
                 // CLEAR;
                 isout = true;
             }
@@ -2567,15 +2572,25 @@ void* parallelSolve(void* ptr)
 
             if(!(inverse(invblock_ll,block_ll,l,eps)))
                 {
-                    printf("ll block has no inverse\n");
+                    printf("ll block has no inverse in thread %d\n",thr);
                     // CLEAR; // нужно сделать не выход ретурн -1 а завести флаг по которому потом выйдут одновременно все потоки а то будет DL
                     isout = true;
                 }
-
+                pthread_barrier_wait(barrier);
             
             // printlxn(invblock_ll,l,l,l,n);
 
-            multiplication(tmpblock_ll,invblock_ll,block_ll,l,l,l);// matmult(tmpblock_ll,invblock_ll,block_ll,l,l,l);
+            // multiplication(tmpblock_ll,invblock_ll,block_ll,l,l,l);// matmult(tmpblock_ll,invblock_ll,block_ll,l,l,l);
+
+
+            for(int ii = 0 ; ii < l; ii++)
+            {
+                for(int jj = 0 ; jj < l; jj++)
+                {
+                    if(ii != jj) block_ll[ii*l+jj] = 0;
+                    else block_ll[ii*l+jj] = 0;
+                }
+            }
 
             mat_x_vector(tmpvecb_l,invblock_ll,vecb_l,l);
             
@@ -2585,7 +2600,7 @@ void* parallelSolve(void* ptr)
             set_vec_block(b,tmpvecb_l,n,m,i);
             // }
             // cout<<"WE ARE IN i = k"<<endl;
-            pthread_barrier_wait(barrier);
+            // pthread_barrier_wait(barrier);
             // pthread_barrier_wait(barrier);
             // pthread_barrier_wait(barrier);
             // pthread_barrier_wait(barrier);
@@ -2728,13 +2743,13 @@ void* parallelSolve(void* ptr)
                 return (void*)-1;
             }
 
-    // if(thr == 0)
-    // {
-    //     printf("Matrix A AFTER ALL OPERATIONS: \n");
-    //     printlxn(a,n,n,n,r);
-    //     printf("Vector b AFTER ALL OPERATIONS: \n");
-    //     printlxn(b,n,1,n,r);
-    // }
+    if(thr == 0)
+    {
+        printf("Matrix A AFTER ALL OPERATIONS: \n");
+        printlxn(a,n,n,n,r);
+        printf("Vector b AFTER ALL OPERATIONS: \n");
+        printlxn(b,n,1,n,r);
+    }
 
     
     //start reverse alg
