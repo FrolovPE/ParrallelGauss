@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 
     if(argc == 7) filename = argv[6];
 
-    
+    p = (n/m > p ? p:n/m);
 
     if(m<=0 || n<0 || r<0 || s<0 || p < 0)
     {
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
     // printf("n = %d m = %d p = %d r = %d s = %d\n",n,m,p,r,s);
 
-    p = (n/m > p ? p:n/m);
+   
 
     a = new double[n*n]; //create matrix a
     b = new double[n];  // create vector b
@@ -91,6 +91,8 @@ int main(int argc, char *argv[])
         ap[thr].thr = thr;
         ap[thr].p = p;
         ap[thr].err = 0;
+        ap[thr].r1 = &r1;
+        ap[thr].r2 = &r2;
         ap[thr].mutex = &mutex;
         ap[thr].barrier = &barrier;
         ap[thr].mainblocks = mainblocks;
@@ -120,13 +122,32 @@ int main(int argc, char *argv[])
             return -1;
         }
     }
+    void* ret0 = parallelSolve(ap+0);
+    int64_t status0 = (int64_t)ret0;
 
-    parallelSolve(ap+0);
+    // printf("STATUS0 = %ld THREAD %d\n",status0,0);
 
+        if(status0 < 0)
+        {
+            r1 = -1; r2 = -1;
+            report(argv[0],task,r1,r2,t1,t2,s,n,m,p); 
 
+            delete []a;
+            delete []b;
+            delete []x;
+            delete []realx;
+            delete []ap;
+            delete []tid;
+            delete []mainblocks;
+            delete []minnorms;
+            return -1;
+        }
+
+    void* ret;
+    int64_t status;
     for(thr = 1; thr < p; thr++)
     {
-        if(pthread_join(tid[thr], 0))
+        if(pthread_join(tid[thr], &ret))
         {
             printf("ERROR: Cannot join thread %d\n",thr);
             delete []a;
@@ -143,6 +164,26 @@ int main(int argc, char *argv[])
             return -1;
         }
 
+        status = (int64_t)ret;
+
+        // printf("STATUS = %ld THREAD %d\n",status,thr);
+
+        if(status < 0)
+        {
+            r1 = -1; r2 = -1;
+            report(argv[0],task,r1,r2,t1,t2,s,n,m,p); 
+
+            delete []a;
+            delete []b;
+            delete []x;
+            delete []realx;
+            delete []ap;
+            delete []tid;
+            delete []mainblocks;
+            delete []minnorms;
+            return -1;
+        }
+
         elapsed = get_full_time() - elapsed;
         // printf("CPU Time thread %d = %.2lf\n",thr,elapsed);
     }
@@ -156,8 +197,7 @@ int main(int argc, char *argv[])
     
 
     //print vector x
-    cout<<"\nSolution vector x : ";
-    printlxn(x,n,1,n,r);
+    
     
     
 
@@ -165,70 +205,6 @@ int main(int argc, char *argv[])
 
     
 
-    //reinit
-
-
-    // if(argc == 5 && s>=1 && s<=4)
-    // {
-    //     init(a,&f,n,s);
-    // }
-
-    // if(argc == 6 && s == 0 ) 
-    // {
-    //     filename = argv[5];
-    //     FILE *file = fopen(filename,"r");
-        
-
-    //     while(fscanf(file,"%lf",&el)==1)
-    //     {
-    //         if(_c<n*n) 
-    //         {
-    //             a[_c] = el;
-    //             _c++;
-    //         }
-
-        
-    //     }
-    //     if(!feof(file) || _c!=n*n){
-    //         printf("Bad file\n");
-    //         report(argv[0],task,r1,r2,t1,t2,s,n,m); 
-    //         fclose(file);
-    //         delete []a;
-    //         delete []b;
-    //         delete []x;
-    //         delete []realx;
-    //         return 0;
-    //     }
-    //     fclose(file);
-    // }
-    // else if(argc == 6 && s!=0)
-    // {
-    //     printf("Wrong usage! If s!=0 dont use initialization from file or s == 0 and file name not specified \n");
-    //     report(argv[0],task,r1,r2,t1,t2,s,n,m); 
-    //     delete []a;
-    //     delete []b;
-    //     delete []x;
-    //     delete []realx;
-    //     return 0;
-    // }
-
-  
-
-    //reinit vector b
-
-    // for (int i = 0; i < n; i++)
-    // {   
-    //     double sumbi = 0;
-    //     for(int k = 0; k <(n-1)/2+1 ; k++)
-    //     {
-    //         sumbi+= a[i*n+2*k];
-            
-            
-    //     }
-        
-    //     b[i] = sumbi;
-        
-    // }
 
     double *Ax = new double[n];//mat_x_vector(a,x,n);
     double *Ax_b = new double[n];//vectorsub( Ax , b, n);

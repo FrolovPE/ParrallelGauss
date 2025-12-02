@@ -16,6 +16,8 @@ int s{};
 int thr{};
 int p{};
 int err{};
+double *r1{};
+double *r2{};
 double time{};
 
 pthread_barrier_t *barrier{};
