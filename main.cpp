@@ -124,8 +124,11 @@ int main(int argc, char *argv[])
     }
     void* ret0 = parallelSolve(ap+0);
     int64_t status0 = (int64_t)ret0;
+<<<<<<< HEAD
     void* ret;
     int64_t status;
+=======
+>>>>>>> 94d65d8 ('Tue, 02 Dec 2025 16:05:17  ')
 
     // printf("STATUS0 = %ld THREAD %d\n",status0,0);
 
@@ -134,6 +137,7 @@ int main(int argc, char *argv[])
             r1 = -1; r2 = -1;
             report(argv[0],task,r1,r2,t1,t2,s,n,m,p); 
 
+<<<<<<< HEAD
             for(thr = 1; thr < p; thr++)
             {
             if(pthread_join(tid[thr], &ret))
@@ -153,10 +157,13 @@ int main(int argc, char *argv[])
                     return -1;
                 }
             }
+=======
+>>>>>>> 94d65d8 ('Tue, 02 Dec 2025 16:05:17  ')
             delete []a;
             delete []b;
             delete []x;
             delete []realx;
+<<<<<<< HEAD
             delete []tid;
             delete []ap;
             delete []mainblocks;
@@ -167,6 +174,17 @@ int main(int argc, char *argv[])
         }
 
     
+=======
+            delete []ap;
+            delete []tid;
+            delete []mainblocks;
+            delete []minnorms;
+            return -1;
+        }
+
+    void* ret;
+    int64_t status;
+>>>>>>> 94d65d8 ('Tue, 02 Dec 2025 16:05:17  ')
     for(thr = 1; thr < p; thr++)
     {
         if(pthread_join(tid[thr], &ret))
