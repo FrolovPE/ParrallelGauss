@@ -2154,8 +2154,10 @@ void* parallelSolve(void* ptr)
         double locmin = 1e64;
         int localMainBlock = i;
         (void)minNorm;
+        mainblocks[thr] = -1;
+        minnorms[thr] = -1;
 
-
+        pthread_barrier_wait(barrier);
         // printf("IN THREAD %d startzone = %d endzone = %d i = %d\n",thr,startzone,endzone,i);
         if(i != k)
         {
@@ -2193,7 +2195,11 @@ void* parallelSolve(void* ptr)
                 
                 
         //             printlxn(invblock_ll,l,l,l,l);
-                minNorm = normofmatrix(invblock_ll,l);
+                // minNorm = normofmatrix(invblock_ll,l);
+                locmin = normofmatrix(invblock_ll,l);
+                localMainBlock = k;
+                mainblocks[thr] = localMainBlock;
+                minnorms[thr] = locmin;
             }   
             
         }
@@ -2323,6 +2329,9 @@ void* parallelSolve(void* ptr)
                 return (void*)-1;
             }
             pthread_barrier_wait(barrier);//important
+
+            // printf("BEFORE MULT thread %d\n",thr);
+            // printlxn(a,n,n,n,r);
 
             //start multiplication
         if(i<k)
