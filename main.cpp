@@ -124,6 +124,8 @@ int main(int argc, char *argv[])
     }
     void* ret0 = parallelSolve(ap+0);
     int64_t status0 = (int64_t)ret0;
+    void* ret;
+    int64_t status;
 
     // printf("STATUS0 = %ld THREAD %d\n",status0,0);
 
@@ -132,19 +134,39 @@ int main(int argc, char *argv[])
             r1 = -1; r2 = -1;
             report(argv[0],task,r1,r2,t1,t2,s,n,m,p); 
 
+            for(thr = 1; thr < p; thr++)
+            {
+            if(pthread_join(tid[thr], &ret))
+                {
+                    printf("ERROR: Cannot join thread %d\n",thr);
+                    delete []a;
+                    delete []b;
+                    delete []x;
+                    delete []realx;
+                    delete []tid;
+                    delete []ap;
+                    delete []mainblocks;
+                    delete []minnorms;
+                    pthread_mutex_destroy(&mutex);
+                    pthread_barrier_destroy(&barrier);
+
+                    return -1;
+                }
+            }
             delete []a;
             delete []b;
             delete []x;
             delete []realx;
-            delete []ap;
             delete []tid;
+            delete []ap;
             delete []mainblocks;
             delete []minnorms;
+            pthread_mutex_destroy(&mutex);
+            pthread_barrier_destroy(&barrier);
             return -1;
         }
 
-    void* ret;
-    int64_t status;
+    
     for(thr = 1; thr < p; thr++)
     {
         if(pthread_join(tid[thr], &ret))

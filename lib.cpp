@@ -2039,10 +2039,14 @@ void* parallelSolve(void* ptr)
             res = readarray(a,n,name);
         }
 
+        pthread_barrier_wait(barrier);
+
         if(res < 0) //tut kazdui thread dolzen znat chto res < 0
         {
             if(thr == 0) printf("File %s is bad\n",name);
+            pthread_mutex_lock(mutex);
             isout = true;
+            pthread_mutex_unlock(mutex);
         }
 
     
@@ -2083,7 +2087,9 @@ void* parallelSolve(void* ptr)
         printf("Norm of matrix A < 1e-64 \n");
         // r1 = -1;r2 = -1; // nado perenesti v main
         
+        pthread_mutex_lock(mutex);
         isout = true;
+        pthread_mutex_unlock(mutex);
     }
 
 
@@ -2103,10 +2109,11 @@ void* parallelSolve(void* ptr)
     if(thr == 0) cout<<"\nVector b : \n";
 
     pllinit_vectorb(b,a,n,m,thr,p);
+     pthread_barrier_wait(barrier);
     
     if(thr == 0) printlxn(b,n,1,n,r);
 
-    pthread_barrier_wait(barrier);
+
     //main algorithm
 
     int  k, l;
@@ -2190,8 +2197,14 @@ void* parallelSolve(void* ptr)
                 if(!inverse(invblock_ll,block_ll,l,eps))
                 {
                     printf("Block [%d,%d] (block[l,l] in our matrix)  has no inverse after the transformations\n",k,k);
+                    pthread_mutex_lock(mutex);
                     isout = true;
+                    pthread_mutex_unlock(mutex);
                 }
+                else
+                {
+
+
                 
                 
         //             printlxn(invblock_ll,l,l,l,l);
@@ -2200,6 +2213,7 @@ void* parallelSolve(void* ptr)
                 localMainBlock = k;
                 mainblocks[thr] = localMainBlock;
                 minnorms[thr] = locmin;
+                }
             }   
             
         }
@@ -2226,7 +2240,9 @@ void* parallelSolve(void* ptr)
                     {    
                         printf("Have no main block in row %d\n",i);
                         // clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
+                        pthread_mutex_lock(mutex);
                         isout = true;
+                        pthread_mutex_unlock(mutex);
                         
                     }
 
@@ -2279,14 +2295,18 @@ void* parallelSolve(void* ptr)
                         printf("No inverse matrix in row %d after the transformations in thread %d\n",i,thr);
                         // cout<<"\n MATRIX A :\n";
                         // printlxn(a,n,n,n,r);
+                        pthread_mutex_lock(mutex);
                         isout = true;
+                        pthread_mutex_unlock(mutex);
                     }
                     else
                         printf("No inverse matrix in row %d\n",i);
 
                     // clear(block_mm,block_ml,block_ll,tmpblock_mm,tmpblock_ml,tmpblock_ml1,tmpblock_ll,invblock_mm,invblock_ll,diagblock_mm,diaginvblock_mm,vecb_m,vecb_l,tmpvecb_m, tmpvecb_l,colsw);
 
-                    isout = true;
+                        pthread_mutex_lock(mutex);
+                        isout = true;
+                        pthread_mutex_unlock(mutex);
                 }
             }
 
@@ -2314,7 +2334,9 @@ void* parallelSolve(void* ptr)
             else if(mainBlock == -1 && thr == 0 && i < k)
             {
                 printf("NO mainblock in row %d\n",i);
+                pthread_mutex_lock(mutex);
                 isout = true;
+                pthread_mutex_unlock(mutex);
             }
 
             
@@ -2344,7 +2366,9 @@ void* parallelSolve(void* ptr)
                 printf("no blocks in row has inverse block i = %d thread %d\n",i,thr);
                 // printlxn(a,n,n,n,r);
                 // CLEAR;
+                pthread_mutex_lock(mutex);
                 isout = true;
+                pthread_mutex_unlock(mutex);
             }
 
             pthread_barrier_wait(barrier);
@@ -2388,7 +2412,9 @@ void* parallelSolve(void* ptr)
                     fprintf(stderr, "Error: temporary buffers not initialized!\n");
                     // CLEAR;
                     // return (void*)-1;
+                    pthread_mutex_lock(mutex);
                     isout = true;
+                    pthread_mutex_unlock(mutex);
                 }
                 // pthread_mutex_unlock(mutex);
             }
@@ -2424,9 +2450,9 @@ void* parallelSolve(void* ptr)
         {   
             // printlxn(a,n,n,n,n);
             // printlxn(b,n,1,n,n);
-            // if(thr==0)
-            // {           
-            pthread_barrier_wait(barrier);
+            if(thr == p-1)
+            {           
+            // pthread_barrier_wait(barrier);
             get_block(a,block_ll,n,m,i,i);
             get_vec_block(b,vecb_l,n,m,i);
 
@@ -2440,9 +2466,11 @@ void* parallelSolve(void* ptr)
                 {
                     printf("ll block has no inverse in thread %d\n",thr);
                     // CLEAR; // нужно сделать не выход ретурн -1 а завести флаг по которому потом выйдут одновременно все потоки а то будет DL
+                    pthread_mutex_lock(mutex);
                     isout = true;
+                    pthread_mutex_unlock(mutex);
                 }
-                pthread_barrier_wait(barrier);
+                // pthread_barrier_wait(barrier);
             
             // printlxn(invblock_ll,l,l,l,n);
 
@@ -2464,7 +2492,7 @@ void* parallelSolve(void* ptr)
 
             set_block(a,tmpblock_ll,n,m,i,i);
             set_vec_block(b,tmpvecb_l,n,m,i);
-            // }
+            }
             // cout<<"WE ARE IN i = k"<<endl;
         }
 

@@ -1,7 +1,8 @@
 obj = main.cpp lib.cpp lib.h args.h mytime.cpp mytime.h
-exec = a.out ga.out gp.out gpO3.out
+exec = a.out ga.out gp.out gpO3.out tsan
 cxx = -O3 -mfpmath=sse -fstack-protector-all -g -W -Wall -Wextra -Wunused -Wcast-align -Werror -pedantic -pedantic-errors -Wfloat-equal -Wpointer-arith -Wformat-security -Wmissing-format-attribute -Wformat=1 -Wwrite-strings -Wcast-align -Wno-long-long -Woverloaded-virtual -Wnon-virtual-dtor -Wcast-qual -Wno-suggest-attribute=format
-parallel = -pthread $(cxx)
+parallel = -pthread  $(cxx)
+tsan = -fsanitize=thread $(parallel)
 gprO3 = -pg $(cxx)
 gpr = -pg $(wo3)
 wo3 = -mfpmath=sse -fstack-protector-all -g -W -Wall -Wextra -Wunused -Wcast-align -Werror -pedantic -pedantic-errors -Wfloat-equal -Wpointer-arith -Wformat-security -Wmissing-format-attribute -Wformat=1 -Wwrite-strings -Wcast-align -Wno-long-long -Woverloaded-virtual -Wnon-virtual-dtor -Wcast-qual -Wno-suggest-attribute=format
@@ -13,6 +14,10 @@ testexe = ./a.out
 a.out: $(obj)
 
 	g++ $(parallel) $(obj) -o a.out
+
+tsan: $(obj)
+
+	g++ $(tsan) $(obj) -o $@
 
 mainzip:
 	zip Frolov_PS.zip $(obj) makefile 
