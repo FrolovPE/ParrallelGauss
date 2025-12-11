@@ -2069,6 +2069,14 @@ void* parallelSolve(void* ptr)
 
     double t = get_cpu_time();
 
+<<<<<<< HEAD
+=======
+    // parallelSolve(...)
+
+    
+
+    
+>>>>>>> ca65dca ('Wed, 26 Nov 2025 16:25:47  ')
 
     pthread_barrier_wait(barrier);
 
@@ -2142,7 +2150,11 @@ void* parallelSolve(void* ptr)
    
 
     // int tcol = (k + is_l<p ? 1:(k+is_l)/p);//how many blocks thread have
+<<<<<<< HEAD
     
+=======
+    static int mainBlock = -1;
+>>>>>>> ca65dca ('Wed, 26 Nov 2025 16:25:47  ')
 
     for(int c =0; c < k  ;c++) colsw[c]=c;
     (void)mainblocks;
@@ -2164,7 +2176,18 @@ void* parallelSolve(void* ptr)
         mainblocks[thr] = -1;
         minnorms[thr] = -1;
 
+<<<<<<< HEAD
         pthread_barrier_wait(barrier);
+=======
+        // int startzone = i + tcol*thr;
+        // int endzone = i+ tcol*(thr + 1);
+
+        // startzone = (startzone <= k ? startzone:k);
+        // endzone = (endzone <= k ? endzone:k);
+        // if(thr == p - 1 ) endzone+=;
+        // if(thr == p - 1 && is_l == 0) endzone++;
+
+>>>>>>> ca65dca ('Wed, 26 Nov 2025 16:25:47  ')
         // printf("IN THREAD %d startzone = %d endzone = %d i = %d\n",thr,startzone,endzone,i);
         if(i != k)
         {
@@ -2731,6 +2754,13 @@ void* parallelSolve(void* ptr)
 
 
     t = get_cpu_time() - t;
+<<<<<<< HEAD
+=======
+
+    ap->time =t;
+
+     printf("CPU Time thread %d = %.2lf\n",thr,ap->time);
+>>>>>>> ca65dca ('Wed, 26 Nov 2025 16:25:47  ')
 
     ap->time =t;
 
