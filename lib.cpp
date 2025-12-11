@@ -2604,8 +2604,8 @@ void* parallelSolve(void* ptr)
                 mat_mult_sub(tmpblock_ml,block_ml,tmpblock_mm,l,m,m);
 
                 
-                // get_vec_block(b,vecb_m,n,m,i);//вычитание из вектора b block_mm*b
-                // get_vec_block(b,tmpvecb_m,n,m,r);//
+//                 get_vec_block(b,vecb_m,n,m,i);//вычитание из вектора b block_mm*b
+                get_vec_block(b,tmpvecb_m,n,m,rr);//
                 vec_mult_sub_lm(tmpvecb_m,block_ml,vecb_m,l,m);//
                 set_block_lm(a, tmpblock_ml, n, m, l, j);
                 // }
