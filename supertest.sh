@@ -14,15 +14,19 @@ else
         exit
     fi
 
-    for((i=2; i<=$n; i++)); do
+    for ((i=2; i<=$n; i++)); do
 
-        for((j=1; j<i; j++)); do
+        for ((j=1; j<i; j++)); do
 
-            for((k=1; k<4;k++)); do
+            for ((k=1; k<4;k++)); do
+
+		for ((q = 1; q <=4 ; q++)); do
                     echo "--------------------------------------------------------------------------"
-                    echo "$exe $i $j $r $k"
-                    $exe $i $j $r $k
+                    echo "$exe $i $j $q $r $k"
+                    $exe $i $j $q $r $k
                     echo ""
+		done
+
             done
 
         done
